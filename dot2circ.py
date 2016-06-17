@@ -22,7 +22,9 @@ folding parameters set to W150 L100.
 color annotation set to my current test sequence.
 """
 
-RNAPLFOLD_PARAMS = "-W 150 -L 100 -T 25"
+RNAPLFOLD_PARAMS = "-W 150 -L 100 "
+RNAFOLD_PARAMS = ""
+
 PERLBIN = ""
 CIRCOSBIN = "circos"
 
@@ -35,28 +37,50 @@ parser.add_argument(
     "--prefix",
     default="dot2circ",
     help="prefix of output files")
+parser.add_argument("--local-fold",
+                    type=bool,
+                    default = False,
+                    help="compute local dotplot using RNAplFold")
+parser.add_argument("--temperature",
+                    type=int,
+                    default = 37,
+                    help="folding temperature")
+
+
 args = parser.parse_args()
 
 # fold
-foldcmd = 'echo {0} | RNAplfold {1}'.format(args.sequence, RNAPLFOLD_PARAMS)
+if args.local_fold is True:
+    foldcmd = 'echo {0} | RNAplfold {1} '.format(args.sequence, RNAPLFOLD_PARAMS)
+else:
+    foldcmd = 'echo {0} | RNAfold -p '.format(args.sequence)
+
+foldcmd += '-T {}'.format(args.temperature)
+
+    
 foldout = check_output(foldcmd, shell=True)
 
+
 # create circos data
-call(['./parse_plfold.sh'], shell=True)
+if args.local_fold is True:
+    call(['./parse_plfold.sh'], shell=True)
+else:
+    call(['./parse_rnafold.sh'], shell=True)
 
 # run circos
 circoscmd = '{0} {1} -param image/file**="{2}.png" '.format(
     PERLBIN,
     CIRCOSBIN,
     args.prefix)
-circoscmd += """\
--param links/link/rules/annot1_1st_stem_start=139 \
-  -param links/link/rules/annot1_1st_stem_end=157 \
--param links/link/rules/annot1_2nd_stem_start=181 \
-  -param links/link/rules/annot1_2nd_stem_end=206 \
--param links/link/rules/annot2_1st_stem_start=179 \
-  -param links/link/rules/annot2_1st_stem_end=198 \
--param links/link/rules/annot2_2nd_stem_start=227 \
-  -param links/link/rules/annot2_2nd_stem_end=246"""
+circoscmd += "" 
+#"""\
+#-param links/link/rules/annot1_1st_stem_start=139 \
+#  -param links/link/rules/annot1_1st_stem_end=157 \
+#-param links/link/rules/annot1_2nd_stem_start=181 \
+#  -param links/link/rules/annot1_2nd_stem_end=206 \
+#-param links/link/rules/annot2_1st_stem_start=179 \
+#  -param links/link/rules/annot2_1st_stem_end=198 \
+#-param links/link/rules/annot2_2nd_stem_start=227 \
+#  -param links/link/rules/annot2_2nd_stem_end=246"""
 print 'calling: "{0}"'.format(circoscmd)
 circosout = check_output(circoscmd, shell=True)
